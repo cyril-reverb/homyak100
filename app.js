@@ -232,29 +232,55 @@ const imageCache = {};
 async function fetchMovieImage(title, year) {
   const cacheKey = title;
   if (imageCache[cacheKey] !== undefined) return imageCache[cacheKey];
-  imageCache[cacheKey] = null; // mark as in-flight
+  imageCache[cacheKey] = null;
+
+  const getSummary = async (pageTitle) => {
+    try {
+      const s = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle)}`).then(r => r.json());
+      if (s.type === 'disambiguation' || !s.extract) return null;
+      return s;
+    } catch { return null; }
+  };
+
+  const isFilmSummary = (s, yr) => {
+    if (!s) return false;
+    const extract = (s.extract || '').toLowerCase();
+    if (!extract.includes('film') && !extract.includes('movie') && !extract.includes('directed')) return false;
+    // Year check: if we know the year, the extract should mention it
+    if (yr && !extract.includes(String(yr))) return false;
+    return true;
+  };
 
   try {
-    // Search with year for precision
-    const query = year ? `${title} ${year} film` : `${title} film`;
-    const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*&srlimit=5`;
-    const { query: q } = await fetch(searchUrl).then(r => r.json());
-    const hits = (q && q.search) || [];
-    if (!hits.length) return null;
+    // Try direct page names in order of likelihood
+    const candidates = [
+      `${title} (film)`,
+      `${title} (${year} film)`,
+      title,
+    ];
 
-    // Pick the hit whose title most closely matches the movie title
-    const titleLower = title.toLowerCase();
-    const best = hits.find(h => h.title.toLowerCase().includes(titleLower))
-                 || hits.find(h => titleLower.includes(h.title.toLowerCase().replace(/ \(.*\)$/, '')))
-                 || hits[0];
+    let img = null;
+    for (const candidate of candidates) {
+      const summary = await getSummary(candidate);
+      if (isFilmSummary(summary, year) && summary.thumbnail?.source) {
+        img = summary.thumbnail.source;
+        break;
+      }
+    }
 
-    const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(best.title)}`;
-    const summary = await fetch(summaryUrl).then(r => r.json());
-
-    // Verify the summary is actually about a film to avoid wrong matches
-    const extract = (summary.extract || '').toLowerCase();
-    const isFilm = extract.includes('film') || extract.includes('movie') || extract.includes('directed');
-    const img = (isFilm && summary.thumbnail?.source) ? summary.thumbnail.source : null;
+    // Fall back to search if direct lookups failed
+    if (!img) {
+      const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(title + ' ' + year + ' film')}&format=json&origin=*&srlimit=5`;
+      const { query: q } = await fetch(searchUrl).then(r => r.json());
+      const hits = (q && q.search) || [];
+      for (const hit of hits) {
+        const summary = await getSummary(hit.title);
+        if (isFilmSummary(summary, year) && summary.thumbnail?.source) {
+          img = summary.thumbnail.source;
+          break;
+        }
+      }
+    }
 
     imageCache[cacheKey] = img;
     return img;
