@@ -688,7 +688,17 @@ nav {
   color: var(--text2);
   padding: 10px 12px;
   border-bottom: 1px solid var(--border);
+  white-space: nowrap;
 }
+
+.movies-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+.movies-table th.sortable:hover { color: var(--text); }
+
+.sort-arrow { margin-left: 4px; font-size: 0.7rem; }
+.sort-arrow.inactive { opacity: 0.3; }
 
 .movies-table td {
   padding: 11px 12px;

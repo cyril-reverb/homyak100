@@ -444,15 +444,40 @@ function renderLeaderboard() {
 
 // ── All Movies View ─────────────────────────────────────────────────────────
 
+let movieSort = { col: 'pts', dir: 'desc' };
+
+function setMovieSort(col) {
+  if (movieSort.col === col) {
+    movieSort.dir = movieSort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    movieSort.col = col;
+    movieSort.dir = col === 'pts' ? 'desc' : 'asc';
+  }
+  renderMoviesView();
+}
+
 function renderMoviesView() {
   const query = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
-  const ranked = getLeaderboard('all');
-  const filtered = query
+  const ranked = getLeaderboard('all'); // base order by points for rank display
+
+  let filtered = query
     ? ranked.filter(m =>
         m.title.toLowerCase().includes(query) ||
         m.director.toLowerCase().includes(query) ||
         String(m.year).includes(query))
-    : ranked;
+    : [...ranked];
+
+  // Apply sort
+  filtered.sort((a, b) => {
+    let av, bv;
+    if (movieSort.col === 'title')    { av = a.title.toLowerCase();    bv = b.title.toLowerCase(); }
+    else if (movieSort.col === 'year')   { av = a.year;                   bv = b.year; }
+    else if (movieSort.col === 'director') { av = a.director.toLowerCase(); bv = b.director.toLowerCase(); }
+    else /* pts */                     { av = totalScore(a);             bv = totalScore(b); }
+    if (av < bv) return movieSort.dir === 'asc' ? -1 : 1;
+    if (av > bv) return movieSort.dir === 'asc' ? 1 : -1;
+    return 0;
+  });
 
   document.getElementById('movie-count').textContent = state.movies.length;
 
@@ -474,13 +499,18 @@ function renderMoviesView() {
     return;
   }
 
+  const arrow = (col) => {
+    if (movieSort.col !== col) return '<span class="sort-arrow inactive">↕</span>';
+    return `<span class="sort-arrow">${movieSort.dir === 'asc' ? '↑' : '↓'}</span>`;
+  };
+
   let html = `<table class="movies-table">
     <thead><tr>
       <th class="col-rank">#</th>
-      <th>Title</th>
-      <th class="col-year">Year</th>
-      <th class="col-director">Director</th>
-      <th class="col-score">Pts</th>
+      <th class="sortable" onclick="setMovieSort('title')">Title ${arrow('title')}</th>
+      <th class="col-year sortable" onclick="setMovieSort('year')">Year ${arrow('year')}</th>
+      <th class="col-director sortable" onclick="setMovieSort('director')">Director ${arrow('director')}</th>
+      <th class="col-score sortable" onclick="setMovieSort('pts')">Pts ${arrow('pts')}</th>
       <th class="col-edit"></th>
     </tr></thead><tbody>`;
 
