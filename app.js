@@ -229,19 +229,34 @@ window.addEventListener('hashchange', () => {
 
 const imageCache = {};
 
-async function fetchMovieImage(title) {
-  if (imageCache[title] !== undefined) return imageCache[title];
-  imageCache[title] = null; // mark as in-flight
+async function fetchMovieImage(title, year) {
+  const cacheKey = title;
+  if (imageCache[cacheKey] !== undefined) return imageCache[cacheKey];
+  imageCache[cacheKey] = null; // mark as in-flight
+
   try {
-    const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(title + ' film')}&format=json&origin=*&srlimit=3`;
-    const { query } = await fetch(searchUrl).then(r => r.json());
-    const hits = (query && query.search) || [];
+    // Search with year for precision
+    const query = year ? `${title} ${year} film` : `${title} film`;
+    const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*&srlimit=5`;
+    const { query: q } = await fetch(searchUrl).then(r => r.json());
+    const hits = (q && q.search) || [];
     if (!hits.length) return null;
 
-    const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(hits[0].title)}`;
+    // Pick the hit whose title most closely matches the movie title
+    const titleLower = title.toLowerCase();
+    const best = hits.find(h => h.title.toLowerCase().includes(titleLower))
+                 || hits.find(h => titleLower.includes(h.title.toLowerCase().replace(/ \(.*\)$/, '')))
+                 || hits[0];
+
+    const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(best.title)}`;
     const summary = await fetch(summaryUrl).then(r => r.json());
-    const img = summary.thumbnail?.source || null;
-    imageCache[title] = img;
+
+    // Verify the summary is actually about a film to avoid wrong matches
+    const extract = (summary.extract || '').toLowerCase();
+    const isFilm = extract.includes('film') || extract.includes('movie') || extract.includes('directed');
+    const img = (isFilm && summary.thumbnail?.source) ? summary.thumbnail.source : null;
+
+    imageCache[cacheKey] = img;
     return img;
   } catch (e) {
     return null;
@@ -289,7 +304,7 @@ function newBattle() {
       setCardImage(side, imageCache[movie.title]);
     } else {
       setCardImage(side, null);
-      fetchMovieImage(movie.title).then(url => setCardImage(side, url));
+      fetchMovieImage(movie.title, movie.year).then(url => setCardImage(side, url));
     }
   });
 
