@@ -1,3 +1,9 @@
+// ── Supabase ────────────────────────────────────────────────────────────────
+
+const SUPABASE_URL = 'https://boicjprjxlggawbihmzt.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_oPpKFeZvqANRAoTG-wSSsA_Dlgm9t4X';
+let db = null;
+
 // ── State ──────────────────────────────────────────────────────────────────
 
 const USERS = ['Nick', 'Matt', 'Friend'];
@@ -57,6 +63,55 @@ function saveState() {
     movies: state.movies,
     battles: state.battles,
   }));
+}
+
+// ── Supabase sync ───────────────────────────────────────────────────────────
+
+async function syncFromSupabase() {
+  if (!db) return;
+  try {
+    const { data, error } = await db.from('scores').select('*');
+    if (error || !data || !data.length) return;
+
+    const scoreMap = {};
+    for (const row of data) {
+      scoreMap[row.movie_title] = { Nick: row.nick || 0, Matt: row.matt || 0, Friend: row.friend || 0 };
+    }
+
+    for (const movie of state.movies) {
+      if (scoreMap[movie.title]) {
+        movie.scores = scoreMap[movie.title];
+      }
+    }
+
+    // Also sync localStorage so offline works
+    saveState();
+
+    if (state.currentUser) {
+      renderLeaderboard();
+      renderMoviesView();
+      if (state.battleA) {
+        renderBattleCard('a', state.battleA);
+        renderBattleCard('b', state.battleB);
+      }
+    }
+  } catch (e) {
+    console.warn('Supabase sync failed, using local data');
+  }
+}
+
+async function recordVoteToSupabase(movieTitle, user, points) {
+  if (!db) return;
+  try {
+    const { error } = await db.rpc('increment_score', {
+      p_movie_title: movieTitle,
+      p_user: user,
+      p_points: points,
+    });
+    if (error) console.warn('Supabase vote failed:', error);
+  } catch (e) {
+    console.warn('Supabase vote failed:', e);
+  }
 }
 
 // ── Score helpers ───────────────────────────────────────────────────────────
@@ -181,6 +236,7 @@ function vote(side, points) {
   });
 
   saveState();
+  recordVoteToSupabase(winner.title, user, points);
 
   // Show result
   const label = points === 3 ? 'much better' : 'better';
@@ -483,3 +539,5 @@ function addMovie() {
 // ── Init ────────────────────────────────────────────────────────────────────
 
 loadState();
+db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+syncFromSupabase();
