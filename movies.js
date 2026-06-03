@@ -135,6 +135,16 @@ const MOVIES_RAW = [
   { title: "The Good, the Bad and the Ugly", year: 1966, director: "Sergio Leone" },
   { title: "Fargo", year: 1996, director: "Joel Coen" },
   { title: "No Country for Old Men", year: 2007, director: "Joel Coen" },
+  { title: "The Rainmaker", year: 1997, director: "Francis Ford Coppola" },
+  { title: "Taxi Driver", year: 1976, director: "Martin Scorsese" },
+  { title: "Vertigo", year: 1958, director: "Alfred Hitchcock" },
+  { title: "The Maltese Falcon", year: 1941, director: "John Huston" },
+  { title: "Backdraft", year: 1991, director: "Ron Howard" },
+  { title: "School Ties", year: 1992, director: "Robert Mandel" },
+  { title: "Rudy", year: 1993, director: "David Anspaugh" },
+  { title: "Up in the Air", year: 2009, director: "Jason Reitman" },
+  { title: "The Secret Agent", year: 2025, director: "Kleber Mendonça Filho" },
+  { title: "Rental Family", year: 2023, director: "Hikari" },
 ];
 
 const MOVIES = MOVIES_RAW.map((m, i) => ({ ...m, id: i + 1 }));

@@ -103,9 +103,9 @@ async function syncFromSupabase() {
           });
           existingTitles.add(row.title.toLowerCase());
         } else {
-          // Update metadata if changed remotely
+          // Only update metadata for custom movies — never overwrite canonical entries
           const movie = state.movies.find(m => m.title.toLowerCase() === row.title.toLowerCase());
-          if (movie) { movie.year = row.year; movie.director = row.director; movie.supabaseId = row.id; movie.isCustom = true; }
+          if (movie && movie.isCustom) { movie.year = row.year; movie.director = row.director; movie.supabaseId = row.id; }
         }
       }
     }
