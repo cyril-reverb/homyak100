@@ -394,22 +394,58 @@ function renderMoviesView() {
       <th class="col-year">Year</th>
       <th class="col-director">Director</th>
       <th class="col-score">Pts</th>
+      <th class="col-edit"></th>
     </tr></thead><tbody>`;
 
   filtered.forEach(movie => {
     const rank = getRank(movie.id, 'all');
     const score = totalScore(movie);
-    html += `<tr>
+    html += `<tr id="movie-row-${movie.id}">
       <td class="col-rank">${rank}</td>
       <td class="col-title">${movie.title}</td>
       <td class="col-year">${movie.year}</td>
       <td class="col-director">${movie.director}</td>
       <td class="col-score">${score}</td>
+      <td class="col-edit"><button class="edit-btn" onclick="startEdit(${movie.id})">Edit</button></td>
     </tr>`;
   });
 
   html += '</tbody></table>';
   document.getElementById('movies-list').innerHTML = html;
+}
+
+function startEdit(movieId) {
+  const movie = state.movies.find(m => m.id === movieId);
+  if (!movie) return;
+  const row = document.getElementById('movie-row-' + movieId);
+  if (!row) return;
+  const rank = getRank(movieId, 'all');
+  const score = totalScore(movie);
+  row.innerHTML = `
+    <td class="col-rank">${rank}</td>
+    <td class="col-title"><input class="edit-input" id="edit-title-${movieId}" value="${movie.title.replace(/"/g, '&quot;')}" /></td>
+    <td class="col-year"><input class="edit-input edit-input-year" id="edit-year-${movieId}" type="number" value="${movie.year}" /></td>
+    <td class="col-director"><input class="edit-input" id="edit-director-${movieId}" value="${movie.director.replace(/"/g, '&quot;')}" /></td>
+    <td class="col-score">${score}</td>
+    <td class="col-edit edit-actions">
+      <button class="save-btn" onclick="saveEdit(${movieId})">Save</button>
+      <button class="cancel-edit-btn" onclick="renderMoviesView()">✕</button>
+    </td>`;
+  document.getElementById('edit-title-' + movieId).focus();
+}
+
+function saveEdit(movieId) {
+  const movie = state.movies.find(m => m.id === movieId);
+  if (!movie) return;
+  const title = document.getElementById('edit-title-' + movieId)?.value.trim();
+  const year = parseInt(document.getElementById('edit-year-' + movieId)?.value);
+  const director = document.getElementById('edit-director-' + movieId)?.value.trim();
+  if (!title || !year || !director) { alert('All fields required.'); return; }
+  movie.title = title;
+  movie.year = year;
+  movie.director = director;
+  saveState();
+  renderMoviesView();
 }
 
 async function addFromSearch() {
