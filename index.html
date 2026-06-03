@@ -42,6 +42,7 @@
           <button class="nav-btn active" onclick="showView('battle')" id="nav-battle">⚔️ Battle</button>
           <button class="nav-btn" onclick="showView('leaderboard')" id="nav-leaderboard">🏆 Leaderboard</button>
           <button class="nav-btn" onclick="showView('movies')" id="nav-movies">🎞 All Movies</button>
+          <button class="nav-btn" onclick="showView('stats')" id="nav-stats">📊 Stats</button>
         </nav>
         <div class="header-right">
           <span class="user-pill" id="current-user-label"></span>
@@ -144,6 +145,32 @@
           <div id="movies-list"></div>
         </div>
       </div>
+
+      <!-- Stats View -->
+      <div id="view-stats" class="view">
+        <div class="stats-container">
+          <div class="stats-header">
+            <h2>📊 Stats</h2>
+            <p>A breakdown of the roster by director, actor, and decade.</p>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-panel">
+              <h3>By Director</h3>
+              <div id="stats-directors"></div>
+            </div>
+            <div class="stat-panel">
+              <h3>By Actor</h3>
+              <p class="stat-note">Based on actors added to battle cards</p>
+              <div id="stats-actors"></div>
+            </div>
+            <div class="stat-panel">
+              <h3>By Decade</h3>
+              <div id="stats-decades"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 

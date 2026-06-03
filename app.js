@@ -203,7 +203,7 @@ function switchUser() {
 
 // ── Navigation ──────────────────────────────────────────────────────────────
 
-const VALID_VIEWS = ['battle', 'leaderboard', 'movies'];
+const VALID_VIEWS = ['battle', 'leaderboard', 'movies', 'stats'];
 
 function currentHashView() {
   const hash = location.hash.replace('#', '');
@@ -218,6 +218,7 @@ function showView(name, pushState = true) {
   if (pushState) location.hash = name;
   if (name === 'leaderboard') renderLeaderboard();
   if (name === 'movies') renderMoviesView();
+  if (name === 'stats') renderStatsView();
   if (name === 'battle' && !state.battleA) newBattle();
 }
 
@@ -795,6 +796,58 @@ function addMovie() {
   saveCustomMovieToSupabase(movie);
   hideAddMovie();
   renderMoviesView();
+}
+
+// ── Stats ────────────────────────────────────────────────────────────────────
+
+function renderStatsView() {
+  const movies = state.movies;
+
+  // By director
+  const byDirector = {};
+  for (const m of movies) {
+    byDirector[m.director] = (byDirector[m.director] || 0) + 1;
+  }
+  const directors = Object.entries(byDirector).sort((a, b) => b[1] - a[1]);
+  const maxDir = directors[0]?.[1] || 1;
+
+  // By actor (only movies that have actors populated)
+  const byActor = {};
+  for (const m of movies) {
+    for (const a of (m.actors || [])) {
+      if (a) byActor[a] = (byActor[a] || 0) + 1;
+    }
+  }
+  const actors = Object.entries(byActor).sort((a, b) => b[1] - a[1]);
+  const maxAct = actors[0]?.[1] || 1;
+
+  // By decade
+  const byDecade = {};
+  for (const m of movies) {
+    const decade = Math.floor(m.year / 10) * 10;
+    byDecade[decade] = (byDecade[decade] || 0) + 1;
+  }
+  const decades = Object.entries(byDecade).sort((a, b) => a[0] - b[0]);
+  const maxDec = Math.max(...decades.map(d => d[1]));
+
+  const barRow = (label, count, max, sub) => `
+    <div class="stat-row">
+      <div class="stat-label">${label}${sub ? `<span class="stat-sub">${sub}</span>` : ''}</div>
+      <div class="stat-bar-wrap">
+        <div class="stat-bar" style="width:${Math.round((count / max) * 100)}%"></div>
+      </div>
+      <div class="stat-count">${count}</div>
+    </div>`;
+
+  document.getElementById('stats-directors').innerHTML =
+    directors.map(([name, count]) => barRow(name, count, maxDir)).join('');
+
+  document.getElementById('stats-actors').innerHTML = actors.length
+    ? actors.map(([name, count]) => barRow(name, count, maxAct)).join('')
+    : '<p class="stat-empty">Vote in more battles to populate actors.</p>';
+
+  document.getElementById('stats-decades').innerHTML =
+    decades.map(([decade, count]) => barRow(`${decade}s`, count, maxDec, ` · ${count} film${count > 1 ? 's' : ''}`)).join('');
 }
 
 // ── Init ────────────────────────────────────────────────────────────────────
