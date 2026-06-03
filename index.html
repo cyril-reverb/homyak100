@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Homyak 100</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- User Selection Screen -->
+    <div id="screen-user" class="screen active">
+      <div class="hero">
+        <div class="hero-badge">🎬</div>
+        <h1>The Homyak 100</h1>
+        <p class="subtitle">The greatest films of all time — decided by battle.</p>
+        <p class="who-label">Who's voting?</p>
+        <div class="user-cards">
+          <button class="user-card" data-user="Nick" onclick="selectUser('Nick')">
+            <div class="user-avatar">N</div>
+            <span>Nick</span>
+          </button>
+          <button class="user-card" data-user="Matt" onclick="selectUser('Matt')">
+            <div class="user-avatar">M</div>
+            <span>Matt</span>
+          </button>
+          <button class="user-card" data-user="Friend" onclick="selectUser('Friend')">
+            <div class="user-avatar">★</div>
+            <span>Friend of Homyak</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="screen-main" class="screen">
+      <header>
+        <div class="header-left">
+          <span class="logo">🎬 Homyak 100</span>
+        </div>
+        <nav>
+          <button class="nav-btn active" onclick="showView('battle')" id="nav-battle">⚔️ Battle</button>
+          <button class="nav-btn" onclick="showView('leaderboard')" id="nav-leaderboard">🏆 Leaderboard</button>
+          <button class="nav-btn" onclick="showView('movies')" id="nav-movies">🎞 All Movies</button>
+        </nav>
+        <div class="header-right">
+          <span class="user-pill" id="current-user-label"></span>
+          <button class="switch-btn" onclick="switchUser()">Switch</button>
+        </div>
+      </header>
+
+      <!-- Battle View -->
+      <div id="view-battle" class="view active">
+        <div class="battle-container">
+          <div class="battle-header">
+            <h2>Which is better?</h2>
+            <p class="battle-sub">Pick the winner — and how decisively.</p>
+          </div>
+          <div class="battle-arena">
+            <div class="battle-card" id="movie-a">
+              <div class="movie-rank" id="rank-a"></div>
+              <div class="movie-title" id="title-a"></div>
+              <div class="movie-meta" id="meta-a"></div>
+              <div class="movie-score" id="score-a"></div>
+              <div class="vote-buttons">
+                <button class="vote-btn better" onclick="vote('a', 1)">Better <span class="pts">+1</span></button>
+                <button class="vote-btn much-better" onclick="vote('a', 3)">Much Better <span class="pts">+3</span></button>
+              </div>
+            </div>
+
+            <div class="vs-divider">VS</div>
+
+            <div class="battle-card" id="movie-b">
+              <div class="movie-rank" id="rank-b"></div>
+              <div class="movie-title" id="title-b"></div>
+              <div class="movie-meta" id="meta-b"></div>
+              <div class="movie-score" id="score-b"></div>
+              <div class="vote-buttons">
+                <button class="vote-btn better" onclick="vote('b', 1)">Better <span class="pts">+1</span></button>
+                <button class="vote-btn much-better" onclick="vote('b', 3)">Much Better <span class="pts">+3</span></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="battle-actions">
+            <button class="skip-btn" onclick="newBattle()">Skip this matchup ↩</button>
+          </div>
+
+          <div id="vote-result" class="vote-result hidden">
+            <div class="result-inner">
+              <div class="result-icon">✓</div>
+              <div class="result-text" id="result-text"></div>
+              <button class="next-btn" onclick="newBattle()">Next Battle →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Leaderboard View -->
+      <div id="view-leaderboard" class="view">
+        <div class="leaderboard-container">
+          <div class="leaderboard-header">
+            <h2>🏆 The Homyak 100</h2>
+            <p class="leaderboard-sub">Top 100 by total points. Updated live as battles conclude.</p>
+            <div class="filter-pills">
+              <button class="filter-pill active" onclick="setFilter('all')" id="filter-all">All Voters</button>
+              <button class="filter-pill" onclick="setFilter('Nick')" id="filter-Nick">Nick</button>
+              <button class="filter-pill" onclick="setFilter('Matt')" id="filter-Matt">Matt</button>
+              <button class="filter-pill" onclick="setFilter('Friend')" id="filter-Friend">Friend</button>
+            </div>
+          </div>
+          <div id="leaderboard-list"></div>
+        </div>
+      </div>
+
+      <!-- All Movies View -->
+      <div id="view-movies" class="view">
+        <div class="movies-container">
+          <div class="movies-header">
+            <h2>🎞 All Movies</h2>
+            <p>The full battle roster — <span id="movie-count"></span> films</p>
+            <div class="movies-toolbar">
+              <input type="text" id="search-input" placeholder="Search movies..." oninput="renderMoviesView()" />
+              <button class="add-movie-btn" onclick="showAddMovie()">+ Add Movie</button>
+            </div>
+          </div>
+          <div id="add-movie-form" class="add-movie-form hidden">
+            <h3>Add a Movie</h3>
+            <div class="form-row">
+              <input type="text" id="new-title" placeholder="Title" oninput="onTitleInput()" autocomplete="off" />
+              <input type="number" id="new-year" placeholder="Year" min="1888" max="2030" />
+              <input type="text" id="new-director" placeholder="Director" />
+              <button onclick="addMovie()">Add</button>
+              <button class="cancel-btn" onclick="hideAddMovie()">Cancel</button>
+            </div>
+            <div id="lookup-status" class="lookup-status"></div>
+            <div class="form-row hidden-row">
+            </div>
+          </div>
+          <div id="movies-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="movies.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
