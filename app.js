@@ -18,7 +18,7 @@ let state = {
   leaderboardFilter: 'all',
 };
 
-const STORAGE_KEY = 'homyak100_v1';
+const STORAGE_KEY = 'homyak100_v2';
 
 function loadState() {
   let savedMovies = [];
@@ -88,24 +88,33 @@ async function syncFromSupabase() {
 
     // Merge custom movies
     if (!customRes.error && customRes.data) {
-      const existingTitles = new Set(state.movies.map(m => m.title.toLowerCase()));
+      const normalize = s => s.toLowerCase().replace(/^(the|a|an)\s+/i, '').replace(/[^a-z0-9\s]/g, '').trim();
       let nextId = Math.max(...state.movies.map(m => m.id), 0) + 1;
       for (const row of customRes.data) {
-        if (!existingTitles.has(row.title.toLowerCase())) {
-          state.movies.push({
-            id: nextId++,
-            title: row.title,
-            year: row.year,
-            director: row.director,
-            supabaseId: row.id,
-            isCustom: true,
-            scores: { Nick: 0, Matt: 0, Friend: 0 },
-          });
-          existingTitles.add(row.title.toLowerCase());
+        // Match by supabaseId first (survives title renames), then fuzzy title
+        let movie = state.movies.find(m => m.supabaseId === row.id)
+                 || state.movies.find(m => m.isCustom && normalize(m.title) === normalize(row.title));
+
+        if (movie) {
+          // Update in-place — never overwrites canonical entries
+          movie.title = row.title;
+          movie.year = row.year;
+          movie.director = row.director;
+          movie.supabaseId = row.id;
         } else {
-          // Only update metadata for custom movies — never overwrite canonical entries
-          const movie = state.movies.find(m => m.title.toLowerCase() === row.title.toLowerCase());
-          if (movie && movie.isCustom) { movie.year = row.year; movie.director = row.director; movie.supabaseId = row.id; }
+          // Check no canonical match before adding
+          const canonicalMatch = state.movies.find(m => !m.isCustom && normalize(m.title) === normalize(row.title));
+          if (!canonicalMatch) {
+            state.movies.push({
+              id: nextId++,
+              title: row.title,
+              year: row.year,
+              director: row.director,
+              supabaseId: row.id,
+              isCustom: true,
+              scores: { Nick: 0, Matt: 0, Friend: 0 },
+            });
+          }
         }
       }
     }
