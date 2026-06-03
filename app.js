@@ -87,9 +87,11 @@ function selectUser(user) {
   document.getElementById('current-user-label').textContent = USER_LABELS[user];
   document.getElementById('screen-user').classList.remove('active');
   document.getElementById('screen-main').classList.add('active');
-  newBattle();
-  renderLeaderboard();
-  renderMoviesView();
+  const view = currentHashView();
+  showView(view, false);
+  if (view !== 'leaderboard') renderLeaderboard();
+  if (view !== 'movies') renderMoviesView();
+  if (view === 'battle') newBattle();
 }
 
 function switchUser() {
@@ -100,14 +102,27 @@ function switchUser() {
 
 // ── Navigation ──────────────────────────────────────────────────────────────
 
-function showView(name) {
+const VALID_VIEWS = ['battle', 'leaderboard', 'movies'];
+
+function currentHashView() {
+  const hash = location.hash.replace('#', '');
+  return VALID_VIEWS.includes(hash) ? hash : 'battle';
+}
+
+function showView(name, pushState = true) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   document.getElementById('nav-' + name).classList.add('active');
+  if (pushState) location.hash = name;
   if (name === 'leaderboard') renderLeaderboard();
   if (name === 'movies') renderMoviesView();
+  if (name === 'battle' && !state.battleA) newBattle();
 }
+
+window.addEventListener('hashchange', () => {
+  if (state.currentUser) showView(currentHashView(), false);
+});
 
 // ── Battle ──────────────────────────────────────────────────────────────────
 
