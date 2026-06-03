@@ -70,21 +70,46 @@ function saveState() {
 async function syncFromSupabase() {
   if (!db) return;
   try {
-    const { data, error } = await db.from('scores').select('*');
-    if (error || !data || !data.length) return;
+    const [scoresRes, customRes] = await Promise.all([
+      db.from('scores').select('*'),
+      db.from('custom_movies').select('*'),
+    ]);
 
-    const scoreMap = {};
-    for (const row of data) {
-      scoreMap[row.movie_title] = { Nick: row.nick || 0, Matt: row.matt || 0, Friend: row.friend || 0 };
-    }
-
-    for (const movie of state.movies) {
-      if (scoreMap[movie.title]) {
-        movie.scores = scoreMap[movie.title];
+    // Apply scores
+    if (!scoresRes.error && scoresRes.data) {
+      const scoreMap = {};
+      for (const row of scoresRes.data) {
+        scoreMap[row.movie_title] = { Nick: row.nick || 0, Matt: row.matt || 0, Friend: row.friend || 0 };
+      }
+      for (const movie of state.movies) {
+        if (scoreMap[movie.title]) movie.scores = scoreMap[movie.title];
       }
     }
 
-    // Also sync localStorage so offline works
+    // Merge custom movies
+    if (!customRes.error && customRes.data) {
+      const existingTitles = new Set(state.movies.map(m => m.title.toLowerCase()));
+      let nextId = Math.max(...state.movies.map(m => m.id), 0) + 1;
+      for (const row of customRes.data) {
+        if (!existingTitles.has(row.title.toLowerCase())) {
+          state.movies.push({
+            id: nextId++,
+            title: row.title,
+            year: row.year,
+            director: row.director,
+            supabaseId: row.id,
+            isCustom: true,
+            scores: { Nick: 0, Matt: 0, Friend: 0 },
+          });
+          existingTitles.add(row.title.toLowerCase());
+        } else {
+          // Update metadata if changed remotely
+          const movie = state.movies.find(m => m.title.toLowerCase() === row.title.toLowerCase());
+          if (movie) { movie.year = row.year; movie.director = row.director; movie.supabaseId = row.id; movie.isCustom = true; }
+        }
+      }
+    }
+
     saveState();
 
     if (state.currentUser) {
@@ -97,6 +122,27 @@ async function syncFromSupabase() {
     }
   } catch (e) {
     console.warn('Supabase sync failed, using local data');
+  }
+}
+
+async function saveCustomMovieToSupabase(movie) {
+  if (!db) return;
+  try {
+    if (movie.supabaseId) {
+      // Update existing
+      await db.from('custom_movies').update({ title: movie.title, year: movie.year, director: movie.director })
+        .eq('id', movie.supabaseId);
+    } else {
+      // Insert new, get back ID
+      const { data } = await db.from('custom_movies')
+        .insert({ title: movie.title, year: movie.year, director: movie.director })
+        .select().single();
+      if (data) movie.supabaseId = data.id;
+    }
+    movie.isCustom = true;
+    saveState();
+  } catch (e) {
+    console.warn('Failed to sync custom movie:', e);
   }
 }
 
@@ -444,7 +490,9 @@ function saveEdit(movieId) {
   movie.title = title;
   movie.year = year;
   movie.director = director;
+  movie.isCustom = true;
   saveState();
+  saveCustomMovieToSupabase(movie);
   renderMoviesView();
 }
 
@@ -504,8 +552,10 @@ function confirmAddFromSearch() {
   }
 
   const newId = Math.max(...state.movies.map(m => m.id), 0) + 1;
-  state.movies.push({ id: newId, title, year, director, scores: { Nick: 0, Matt: 0, Friend: 0 } });
+  const movie = { id: newId, title, year, director, isCustom: true, scores: { Nick: 0, Matt: 0, Friend: 0 } };
+  state.movies.push(movie);
   saveState();
+  saveCustomMovieToSupabase(movie);
 
   document.getElementById('search-input').value = '';
   renderMoviesView();
@@ -605,15 +655,11 @@ function addMovie() {
   }
 
   const newId = Math.max(...state.movies.map(m => m.id), 0) + 1;
-  state.movies.push({
-    id: newId,
-    title,
-    year,
-    director,
-    scores: { Nick: 0, Matt: 0, Friend: 0 },
-  });
+  const movie = { id: newId, title, year, director, isCustom: true, scores: { Nick: 0, Matt: 0, Friend: 0 } };
+  state.movies.push(movie);
 
   saveState();
+  saveCustomMovieToSupabase(movie);
   hideAddMovie();
   renderMoviesView();
 }
