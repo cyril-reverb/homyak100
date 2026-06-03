@@ -781,7 +781,30 @@ nav {
 
 .stats-header { margin-bottom: 32px; }
 .stats-header h2 { font-size: 1.8rem; font-weight: 800; margin-bottom: 6px; }
-.stats-header p { color: var(--text2); }
+.stats-header p { color: var(--text2); margin-bottom: 16px; }
+
+.stats-toggle {
+  display: inline-flex;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  gap: 3px;
+}
+
+.stats-toggle-btn {
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 7px 18px;
+  color: var(--text2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.stats-toggle-btn:hover { color: var(--text); }
+.stats-toggle-btn.active { background: var(--gold); color: #000; }
 
 .stats-grid {
   display: grid;

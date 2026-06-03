@@ -152,6 +152,10 @@
           <div class="stats-header">
             <h2>📊 Stats</h2>
             <p>A breakdown of the roster by director, actor, and decade.</p>
+            <div class="stats-toggle">
+              <button class="stats-toggle-btn active" id="stats-toggle-all" onclick="setStatsScope('all')">All Movies</button>
+              <button class="stats-toggle-btn" id="stats-toggle-top100" onclick="setStatsScope('top100')">Top 100 Only</button>
+            </div>
           </div>
           <div class="stats-grid">
             <div class="stat-panel">

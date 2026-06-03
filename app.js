@@ -800,35 +800,18 @@ function addMovie() {
 
 // ── Stats ────────────────────────────────────────────────────────────────────
 
+let statsScope = 'all'; // 'all' | 'top100'
+
+function setStatsScope(scope) {
+  statsScope = scope;
+  document.querySelectorAll('.stats-toggle-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('stats-toggle-' + scope).classList.add('active');
+  renderStatsView();
+}
+
 function renderStatsView() {
-  const movies = state.movies;
-
-  // By director
-  const byDirector = {};
-  for (const m of movies) {
-    byDirector[m.director] = (byDirector[m.director] || 0) + 1;
-  }
-  const directors = Object.entries(byDirector).sort((a, b) => b[1] - a[1]);
-  const maxDir = directors[0]?.[1] || 1;
-
-  // By actor (only movies that have actors populated)
-  const byActor = {};
-  for (const m of movies) {
-    for (const a of (m.actors || [])) {
-      if (a) byActor[a] = (byActor[a] || 0) + 1;
-    }
-  }
-  const actors = Object.entries(byActor).sort((a, b) => b[1] - a[1]);
-  const maxAct = actors[0]?.[1] || 1;
-
-  // By decade
-  const byDecade = {};
-  for (const m of movies) {
-    const decade = Math.floor(m.year / 10) * 10;
-    byDecade[decade] = (byDecade[decade] || 0) + 1;
-  }
-  const decades = Object.entries(byDecade).sort((a, b) => a[0] - b[0]);
-  const maxDec = Math.max(...decades.map(d => d[1]));
+  const ranked = getLeaderboard('all');
+  const movies = statsScope === 'top100' ? ranked.slice(0, 100) : ranked;
 
   const barRow = (label, count, max, sub) => `
     <div class="stat-row">
@@ -839,8 +822,27 @@ function renderStatsView() {
       <div class="stat-count">${count}</div>
     </div>`;
 
-  document.getElementById('stats-directors').innerHTML =
-    directors.map(([name, count]) => barRow(name, count, maxDir)).join('');
+  // By director (2+ films only)
+  const byDirector = {};
+  for (const m of movies) byDirector[m.director] = (byDirector[m.director] || 0) + 1;
+  const directors = Object.entries(byDirector).filter(([, c]) => c >= 2).sort((a, b) => b[1] - a[1]);
+  const maxDir = directors[0]?.[1] || 1;
+
+  // By actor
+  const byActor = {};
+  for (const m of movies) for (const a of (m.actors || [])) { if (a) byActor[a] = (byActor[a] || 0) + 1; }
+  const actors = Object.entries(byActor).sort((a, b) => b[1] - a[1]);
+  const maxAct = actors[0]?.[1] || 1;
+
+  // By decade
+  const byDecade = {};
+  for (const m of movies) { const d = Math.floor(m.year / 10) * 10; byDecade[d] = (byDecade[d] || 0) + 1; }
+  const decades = Object.entries(byDecade).sort((a, b) => a[0] - b[0]);
+  const maxDec = Math.max(...decades.map(d => d[1]));
+
+  document.getElementById('stats-directors').innerHTML = directors.length
+    ? directors.map(([name, count]) => barRow(name, count, maxDir)).join('')
+    : '<p class="stat-empty">No directors with 2+ films in this set.</p>';
 
   document.getElementById('stats-actors').innerHTML = actors.length
     ? actors.map(([name, count]) => barRow(name, count, maxAct)).join('')
