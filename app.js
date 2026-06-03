@@ -179,6 +179,41 @@ window.addEventListener('hashchange', () => {
   if (state.currentUser) showView(currentHashView(), false);
 });
 
+// ── Movie images ─────────────────────────────────────────────────────────────
+
+const imageCache = {};
+
+async function fetchMovieImage(title) {
+  if (imageCache[title] !== undefined) return imageCache[title];
+  imageCache[title] = null; // mark as in-flight
+  try {
+    const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(title + ' film')}&format=json&origin=*&srlimit=3`;
+    const { query } = await fetch(searchUrl).then(r => r.json());
+    const hits = (query && query.search) || [];
+    if (!hits.length) return null;
+
+    const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(hits[0].title)}`;
+    const summary = await fetch(summaryUrl).then(r => r.json());
+    const img = summary.thumbnail?.source || null;
+    imageCache[title] = img;
+    return img;
+  } catch (e) {
+    return null;
+  }
+}
+
+function setCardImage(side, url) {
+  const el = document.getElementById('poster-' + side);
+  if (!el) return;
+  if (url) {
+    el.style.backgroundImage = `url(${url})`;
+    el.classList.remove('poster-empty');
+  } else {
+    el.style.backgroundImage = '';
+    el.classList.add('poster-empty');
+  }
+}
+
 // ── Battle ──────────────────────────────────────────────────────────────────
 
 function pickTwoRandom() {
@@ -200,6 +235,17 @@ function newBattle() {
 
   renderBattleCard('a', a);
   renderBattleCard('b', b);
+
+  // Load posters (show cached immediately, fetch if missing)
+  ['a', 'b'].forEach(side => {
+    const movie = side === 'a' ? a : b;
+    if (imageCache[movie.title]) {
+      setCardImage(side, imageCache[movie.title]);
+    } else {
+      setCardImage(side, null);
+      fetchMovieImage(movie.title).then(url => setCardImage(side, url));
+    }
+  });
 
   // Re-enable buttons
   document.querySelectorAll('.vote-btn').forEach(btn => {
