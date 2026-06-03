@@ -452,6 +452,7 @@ function setMovieSort(col) {
   } else {
     movieSort.col = col;
     movieSort.dir = col === 'pts' ? 'desc' : 'asc';
+    if (col === 'added') movieSort.dir = 'asc';
   }
   renderMoviesView();
 }
@@ -470,10 +471,11 @@ function renderMoviesView() {
   // Apply sort
   filtered.sort((a, b) => {
     let av, bv;
-    if (movieSort.col === 'title')    { av = a.title.toLowerCase();    bv = b.title.toLowerCase(); }
-    else if (movieSort.col === 'year')   { av = a.year;                   bv = b.year; }
+    if (movieSort.col === 'title')      { av = a.title.toLowerCase();    bv = b.title.toLowerCase(); }
+    else if (movieSort.col === 'year')  { av = a.year;                   bv = b.year; }
     else if (movieSort.col === 'director') { av = a.director.toLowerCase(); bv = b.director.toLowerCase(); }
-    else /* pts */                     { av = totalScore(a);             bv = totalScore(b); }
+    else if (movieSort.col === 'added') { av = a.id;                     bv = b.id; }
+    else /* pts */                      { av = totalScore(a);             bv = totalScore(b); }
     if (av < bv) return movieSort.dir === 'asc' ? -1 : 1;
     if (av > bv) return movieSort.dir === 'asc' ? 1 : -1;
     return 0;
@@ -506,7 +508,7 @@ function renderMoviesView() {
 
   let html = `<table class="movies-table">
     <thead><tr>
-      <th class="col-rank">#</th>
+      <th class="col-rank sortable" onclick="setMovieSort('added')" title="Sort by order added"># ${arrow('added')}</th>
       <th class="sortable" onclick="setMovieSort('title')">Title ${arrow('title')}</th>
       <th class="col-year sortable" onclick="setMovieSort('year')">Year ${arrow('year')}</th>
       <th class="col-director sortable" onclick="setMovieSort('director')">Director ${arrow('director')}</th>
