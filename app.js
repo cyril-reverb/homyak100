@@ -225,9 +225,45 @@ window.addEventListener('hashchange', () => {
   if (state.currentUser) showView(currentHashView(), false);
 });
 
-// ── Movie images ─────────────────────────────────────────────────────────────
+// ── Movie images & actors ────────────────────────────────────────────────────
 
 const imageCache = {};
+const actorsCache = {};
+
+function extractActorsFromWikitext(wikitext) {
+  const match = wikitext.match(/\|\s*starring\s*=\s*([\s\S]*?)(?=\n\s*\||\n\s*\}\}|\}\})/);
+  if (!match) return [];
+  const raw = match[1];
+  const names = [...raw.matchAll(/\[\[([^\]|#:]+?)(?:\|[^\]]+)?\]\]/g)]
+    .map(m => m[1].replace(/_/g, ' ').trim())
+    .filter(n => n.length > 1 && !n.includes('(') );
+  return names.slice(0, 3);
+}
+
+async function fetchMovieActors(title, year) {
+  if (actorsCache[title] !== undefined) return actorsCache[title];
+  actorsCache[title] = [];
+  try {
+    const pageTitles = [`${title} (film)`, `${title} (${year} film)`, title];
+    for (const pageTitle of pageTitles) {
+      const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(pageTitle)}&prop=revisions&rvprop=content&rvslots=main&rvsection=0&format=json&origin=*`;
+      const data = await fetch(url).then(r => r.json());
+      const pages = data.query?.pages || {};
+      const page = Object.values(pages)[0];
+      if (page.missing !== undefined) continue;
+      const wikitext = page.revisions?.[0]?.slots?.main?.['*'] || '';
+      const actors = extractActorsFromWikitext(wikitext);
+      if (actors.length) { actorsCache[title] = actors; return actors; }
+    }
+  } catch (e) {}
+  return [];
+}
+
+function setCardActors(side, actors) {
+  const el = document.getElementById('actors-' + side);
+  if (!el) return;
+  el.textContent = actors.length ? actors.join('  ·  ') : '';
+}
 
 async function fetchMovieImage(title, year) {
   const cacheKey = title;
@@ -323,14 +359,30 @@ function newBattle() {
   renderBattleCard('a', a);
   renderBattleCard('b', b);
 
-  // Load posters (show cached immediately, fetch if missing)
+  // Load posters + actors (show cached immediately, fetch if missing)
   ['a', 'b'].forEach(side => {
     const movie = side === 'a' ? a : b;
+
+    // Image
     if (imageCache[movie.title]) {
       setCardImage(side, imageCache[movie.title]);
     } else {
       setCardImage(side, null);
       fetchMovieImage(movie.title, movie.year).then(url => setCardImage(side, url));
+    }
+
+    // Actors
+    const cachedActors = movie.actors?.length ? movie.actors : actorsCache[movie.title];
+    if (cachedActors?.length) {
+      setCardActors(side, cachedActors);
+    } else {
+      setCardActors(side, []);
+      fetchMovieActors(movie.title, movie.year).then(actors => {
+        if (actors.length) {
+          movie.actors = actors; // persist to state
+          setCardActors(side, actors);
+        }
+      });
     }
   });
 
@@ -540,6 +592,7 @@ function startEdit(movieId) {
   if (!row) return;
   const rank = getRank(movieId, 'all');
   const score = totalScore(movie);
+  const actorsVal = (movie.actors || []).join(', ').replace(/"/g, '&quot;');
   row.innerHTML = `
     <td class="col-rank">${rank}</td>
     <td class="col-title"><input class="edit-input" id="edit-title-${movieId}" value="${movie.title.replace(/"/g, '&quot;')}" /></td>
@@ -549,6 +602,10 @@ function startEdit(movieId) {
     <td class="col-edit edit-actions">
       <button class="save-btn" onclick="saveEdit(${movieId})">Save</button>
       <button class="cancel-edit-btn" onclick="renderMoviesView()">✕</button>
+    </td>
+    <td colspan="6" class="edit-actors-row">
+      <label class="edit-actors-label">Actors (comma-separated)</label>
+      <input class="edit-input edit-input-actors" id="edit-actors-${movieId}" placeholder="e.g. Tom Hanks, Robin Wright" value="${actorsVal}" />
     </td>`;
   document.getElementById('edit-title-' + movieId).focus();
 }
@@ -560,10 +617,13 @@ function saveEdit(movieId) {
   const year = parseInt(document.getElementById('edit-year-' + movieId)?.value);
   const director = document.getElementById('edit-director-' + movieId)?.value.trim();
   if (!title || !year || !director) { alert('All fields required.'); return; }
+  const actorsRaw = document.getElementById('edit-actors-' + movieId)?.value || '';
   movie.title = title;
   movie.year = year;
   movie.director = director;
+  movie.actors = actorsRaw.split(',').map(a => a.trim()).filter(Boolean);
   movie.isCustom = true;
+  actorsCache[title] = movie.actors; // update cache too
   saveState();
   saveCustomMovieToSupabase(movie);
   renderMoviesView();
