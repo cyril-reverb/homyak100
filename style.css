@@ -227,44 +227,21 @@ nav {
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 0 0 24px;
+  padding: 28px 28px 24px;
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 10px;
   transition: border-color 0.2s;
   position: relative;
-  overflow: hidden;
 }
 
-.movie-poster {
-  width: 100%;
-  height: 220px;
-  background-size: cover;
-  background-position: center top;
-  background-color: var(--bg3);
-  margin-bottom: 20px;
-  flex-shrink: 0;
-}
+.movie-rank { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; color: var(--text2); font-weight: 600; }
+.movie-title { font-size: 1.6rem; font-weight: 800; line-height: 1.2; color: var(--text); }
+.movie-meta { color: var(--text2); font-size: 0.9rem; }
+.movie-actors { color: var(--text2); font-size: 0.82rem; font-style: italic; min-height: 16px; }
+.movie-score { font-size: 0.9rem; color: var(--gold); font-weight: 600; }
 
-.poster-empty {
-  background-image: none;
-  background-color: var(--bg3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.poster-empty::after {
-  content: '🎬';
-  font-size: 2.5rem;
-  opacity: 0.3;
-}
-
-.movie-rank { padding: 0 24px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; color: var(--text2); font-weight: 600; margin-bottom: 6px; }
-.movie-title { padding: 0 24px; font-size: 1.5rem; font-weight: 800; line-height: 1.2; color: var(--text); margin-bottom: 6px; }
-.movie-meta { padding: 0 24px; color: var(--text2); font-size: 0.9rem; margin-bottom: 2px; }
-.movie-actors { padding: 0 24px; color: var(--text2); font-size: 0.8rem; font-style: italic; min-height: 18px; margin-bottom: 4px; }
-.movie-score { padding: 0 24px; font-size: 0.9rem; color: var(--gold); font-weight: 600; margin-bottom: 16px; }
+.vote-buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
 
 .edit-actors-row { padding: 8px 12px 4px; }
 .edit-actors-label { display: block; font-size: 0.72rem; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }

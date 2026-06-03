@@ -369,19 +369,9 @@ function newBattle() {
   renderBattleCard('a', a);
   renderBattleCard('b', b);
 
-  // Load posters + actors (show cached immediately, fetch if missing)
+  // Load actors (show cached immediately, fetch if missing)
   ['a', 'b'].forEach(side => {
     const movie = side === 'a' ? a : b;
-
-    // Image
-    if (imageCache[movie.title]) {
-      setCardImage(side, imageCache[movie.title]);
-    } else {
-      setCardImage(side, null);
-      fetchMovieImage(movie.title, movie.year).then(url => setCardImage(side, url));
-    }
-
-    // Actors
     const cachedActors = movie.actors?.length ? movie.actors : actorsCache[movie.title];
     if (cachedActors?.length) {
       setCardActors(side, cachedActors);
@@ -389,7 +379,7 @@ function newBattle() {
       setCardActors(side, []);
       fetchMovieActors(movie.title, movie.year).then(actors => {
         if (actors.length) {
-          movie.actors = actors; // persist to state
+          movie.actors = actors;
           setCardActors(side, actors);
         }
       });
